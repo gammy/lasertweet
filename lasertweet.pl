@@ -68,6 +68,7 @@ use Encode;
 use constant {
 	FRIENDS_PER_ROW       => 10,
 	HTTP_TIMEOUT          => 20,
+	EVAL_TIMEOUT          => 30,            # Should be longer than HTTP_TIMEOUT
 	SERVER_TAG_HACK       => 'EFnet',
 	SERVER_ENABLE_BCAST   => 1,		# /* Make staticPost broadcast..
 	DEBUG                 => 1,             #    ..to all chans in list.. */
@@ -89,7 +90,6 @@ my $twitter = -1;
 my $global_timer = -1;
 our $max;
 our $timestamp;
-
 
 # Public commands (mappings)
 my %laseropts = (
@@ -129,6 +129,19 @@ my %laseropts_env = (
 );
 
 ## F r a m e w o r k ########################################################
+
+sub handleEvalError {
+	my ($location, $msg) = @_;
+
+	if($msg =~ m/Eval/) {
+		dStatPrint("Timeout(SHOULD NOT HAPPEN) in Net::Twitter during $location: $msg");
+		dStatPrint("Re-instantiating Net::Twitter.");
+		initTwitter();
+	} else {
+		dStatPrint("Error in Net::Twitter during $location: $msg");
+	}
+
+}
 
 sub handleArgs {
         my $Argument = lc($_[0]);
@@ -174,6 +187,11 @@ sub loadSettings {
 
 ## T i m e r ################################################################
 
+sub alarmHandler {
+	dStatPrint("BUGTRACK: Eval timeout");
+	die "Eval timeout";
+}
+
 sub stopTimer{
         Irssi::timeout_remove($global_timer) if $global_timer != -1;
 }
@@ -187,10 +205,14 @@ sub resetTimer{
 }
 
 sub dStatPrint{
-        statPrint(@_) if DEBUG;
+	statPrint(@_) if DEBUG;
 }
 
 sub statPrint{
+
+	# XXX debug
+	staticPost($_) for @_;
+		
         Irssi::active_win->print(@_);
 }
 
@@ -303,6 +325,8 @@ sub initTwitter {
 	undef $twitter;
 
 	eval {
+		alarm(EVAL_TIMEOUT);
+
 		$twitter = new Net::Twitter(
 				traits               => [qw/API::REST OAuth/],
 				# Basic authentication is deprecated.
@@ -322,10 +346,13 @@ sub initTwitter {
 					timeout => HTTP_TIMEOUT,
 				}
 				);
+
 	};
+
+	alarm(0);
 	
 	if($@) {
-		dStatPrint("Error in new Net::Twitter: \"$@\".");
+		handleEvalError("Init", $@);
 		return();
 	}
 
@@ -339,31 +366,35 @@ sub initTwitter {
 
 sub checkTwitterUpdates{
 
-	dStatPrint("CHECKUPDATE: Last entry was \""  .
-		   $laseropts_env{'twitter_last_id'}."\"");
+	#dStatPrint("CHECKUPDATE: Last entry was \""  .
+	#	   $laseropts_env{'twitter_last_id'}."\"");
 
 	my $ret;
 
 	eval {
+		alarm(EVAL_TIMEOUT);
+
 		$ret = $twitter->home_timeline({
 			since_id => $laseropts_env{'twitter_last_id'},
 			count    => TWITTER_MSG_COUNT });
 	};
 
+	alarm(0);
+
 	if($@) {
-		dStatPrint("Error in twitter->home_timeline: \"$@\".");
+		handleEvalError("checkTwitterUpdates", $@);
 		return();
 	}
 
 	my $new_id = ${$ret}[0]->{'id'};
 	unless(defined $new_id) {
-		dStatPrint("Apparently nothing new?");
+		#dStatPrint("Apparently nothing new?");
 		#dStatPrint(Dumper($ret));
 		return();
 	}
 
 	if("$laseropts_env{twitter_last_id}" eq "$new_id") {
-		dStatPrint("last id [$laseropts_env{twitter_last_id}] = new id [$new_id]");
+		#dStatPrint("last id [$laseropts_env{twitter_last_id}] = new id [$new_id]");
 		return();
 	}
 
@@ -381,7 +412,7 @@ sub checkTwitterUpdates{
 		}
 
 		my $new_id = $entry->{'id'};
-		dStatPrint("Currently on $new_id");
+		#dStatPrint("Currently on $new_id");
 
 		my $text = MSG_HEADER_STATUS . 
 			constructTwitterStatus($entry, 'user');
@@ -395,31 +426,35 @@ sub checkTwitterUpdates{
 
 sub checkTwitterDMs{
 	
-	dStatPrint("(DM) CHECKUPDATE: Last entry was \""  .
-		   $laseropts_env{'twitter_dm_last_id'}."\"");
+	#dStatPrint("(DM) CHECKUPDATE: Last entry was \""  .
+	#	   $laseropts_env{'twitter_dm_last_id'}."\"");
 
 	my $ret;
 
 	eval {
+		alarm(EVAL_TIMEOUT);
+
 		$ret = $twitter->direct_messages({
 			since_id => $laseropts_env{'twitter_dm_last_id'},
 			count   => TWITTER_MSG_COUNT });
 	};
 
+	alarm(0);
+
 	if($@) {
-		dStatPrint("Error in direct_messages: \"$@\"");
+		handleEvalError("checkTwitterDMs", $@);
 		return();
 	}
 
 	my $new_id = ${$ret}[0]->{'id'};
 	unless(defined $new_id) {
-		dStatPrint("(DM) Apparently nothing new?");
+		#dStatPrint("(DM) Apparently nothing new?");
 		#dStatPrint(Dumper($ret));
 		return();
 	}
 
 	if("$laseropts_env{twitter_dm_last_id}" eq "$new_id") {
-		dStatPrint("(DM) last id [$laseropts_env{twitter_dm_last_id}] = new id [$new_id]");
+		#dStatPrint("(DM) last id [$laseropts_env{twitter_dm_last_id}] = new id [$new_id]");
 		return();
 	}
 
@@ -437,7 +472,7 @@ sub checkTwitterDMs{
 		}
 
 		my $new_id = $entry->{'id'};
-		dStatPrint("(DM) Currently on $new_id");
+		#dStatPrint("(DM) Currently on $new_id");
 		
 		my $text = MSG_HEADER_DM .
 			constructTwitterStatus($entry, 'sender');
@@ -477,7 +512,7 @@ sub getQuery{
 
     my $tmptime = time() - $timestamp;
     if($tmptime < $laseropts_env{'flood_delay'}) {
-	    dStatPrint("Time $tmptime, ignoring request");
+	    #dStatPrint("Time $tmptime, ignoring request");
 	    serverPost($server, MSG_HEADER_BAD . 'Slow down.', 
 		       $target);
 	    return;
@@ -518,6 +553,8 @@ sub setTwitterDM {
 	my $ret;
 
 	eval {
+		alarm(EVAL_TIMEOUT);
+
 		# For some reason this gives us a "Not Found" error and
 		# an error even though we conform to the API:
 		# "Use of uninitialized value in subroutine entry at 
@@ -532,8 +569,10 @@ sub setTwitterDM {
 		$ret = $twitter->update('DM @' . $user . ' ' . $status);
 	};
 
+	alarm(0);
+
 	if($@) {
-		dStatPrint("Error in DM: \"$@\"");
+		handleEvalError("setTwitterDM", $@);
 		return($@);
 	}
 
@@ -553,12 +592,16 @@ sub setTwitterUpdate {
 	my $ret;
 
 	eval {
+		alarm(EVAL_TIMEOUT);
+
 		#dStatPrint("Status = $status");
 		$ret = $twitter->update(decode("utf8", $status));
 	};
 
+	alarm(0);
+
 	if($@) {
-		dStatPrint("Error in update: \"$@\"");
+		handleEvalError("setTwitterUpdate", $@);
 		return($@);
 	}
 
@@ -586,7 +629,7 @@ sub cmdHelp {
 	my ($server, $target, @calls) = (shift, shift, @_);
 		
 		
-	dStatPrint("->@calls");
+	#dStatPrint("->@calls");
 	my $opt = "";
 
 	if(@calls > 0) {
@@ -660,7 +703,7 @@ sub cmdTweet {
 			my $end_offset = index($entry, ' ', 4); #XXX Can be out of bounds!
 			$user = substr($entry, 4, $end_offset - 4);
 			$entry = substr($entry, $end_offset + 1);
-			dStatPrint("offs = $end_offset\nuser = '$user'\nentry = '$entry'\n");
+			#dStatPrint("offs = $end_offset\nuser = '$user'\nentry = '$entry'\n");
 			$dm = 1; # XXX wtf do better, stoner.
 		} else {
 			dStatPrint("Not sure what happened. entry: \"$entry\"");
@@ -687,10 +730,15 @@ sub cmdGetFollowing {
 
 	my $ret;
 	eval {
+		alarm(EVAL_TIMEOUT);
 		$ret = $twitter->friends();
 	};
 
+	alarm(0);
+
 	if($@) {
+		# FIXME 
+		handleEvalError("cmdGetFollowing", $@);
 		serverPost($server, MSG_HEADER_BAD . "\"$@\".", $target);
 		return();
 	}
@@ -735,10 +783,15 @@ sub cmdFavorite {
 
 	my $ret;
 	eval {
+		alarm(EVAL_TIMEOUT);
 		$ret = $twitter->create_favorite($entry);
 	};
 
+	alarm(0);
+
 	if($@) {
+		# FIXME
+		handleEvalError("cmdFavorite", $@);
 		serverPost($server, MSG_HEADER_BAD . "\"$@\".", $target);
 		return();
 	}
@@ -770,10 +823,15 @@ sub cmdUnfavorite {
 
 	my $ret;
 	eval {
+		alarm(EVAL_TIMEOUT);
 		$ret = $twitter->destroy_favorite($entry);
 	};
 
+	alarm(0);
+
 	if($@) {
+		# FIXME
+		handleEvalError("cmdUnfavourite", $@);
 		serverPost($server, MSG_HEADER_BAD . "\"$@\".", $target);
 		return();
 	}
@@ -805,10 +863,14 @@ sub cmdFollow {
 
 	my $ret;
 	eval {
+		alarm(EVAL_TIMEOUT);
 		$ret = $twitter->create_friend($entry);
 	};
 
+	alarm(0);
+
 	if($@) {
+		handleEvalError("cmdFollow", $@);
 		serverPost($server, MSG_HEADER_BAD . "\"$@\".", $target);
 		return();
 	}
@@ -840,10 +902,14 @@ sub cmdUnfollow {
 
 	my $ret;
 	eval {
+		alarm(EVAL_TIMEOUT);
 		$ret = $twitter->destroy_friend($entry);
 	};
 
+	alarm(0);
+
 	if($@) {
+		handleEvalError("cmdUnfollow", $@);
 		serverPost($server, MSG_HEADER_BAD . "\"$@\".", $target);
 		return();
 	}
@@ -875,11 +941,15 @@ sub cmdGetStatusByScreenName {
 
 	my $ret;
 	eval {
+		alarm(EVAL_TIMEOUT);
 		$ret = $twitter->user_timeline({ screen_name => $entry,
 		   			         count       => 1});
 	};
 
+	alarm(0);
+
 	if($@) { # Is also true if there is no user with that name
+		handleEvalError("cmdGetStatusByScreenName", $@);
 		serverPost($server, MSG_HEADER_BAD .  "\"$@\".", $target);
 		return();
 	}
@@ -902,13 +972,19 @@ sub cmdTwitterCallback {
 
 ## I n i t ##################################################################
 
+# Setup sigalarm handler
+my $sigmask = POSIX::SigSet->new(SIGALRM);
+my $sigact = POSIX::SigAction->new("alarmHandler", $sigmask);
+my $oldaction = POSIX::SigAction->new();
+sigaction(SIGALRM, $sigact, $oldaction);
+
 # Setup defaults
 for my $key (keys(%laseropts)) {
 	Irssi::settings_add_str('misc', "lasertweet_$key", $laseropts{$key});
 }
 for my $key (keys(%laseropts_env)) {
 	Irssi::settings_add_str('misc', "lasertweet_$key", $laseropts_env{$key});
-	dStatPrint("SET lasertweet_$key => $laseropts_env{$key}");
+	#dStatPrint("SET lasertweet_$key => $laseropts_env{$key}");
 }
 
 loadSettings();
