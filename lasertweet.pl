@@ -45,49 +45,6 @@
 #		  and will also broadcast to those channels unless
 #		  SERVER_ENABLE_BCAST = 0 (see below). If it is 1, then it
 #                 will only listen and publish to the first channel in the list.
-#
-# Changelog:
-#	110204:
-#		- Decode utf8 string (coming from irssi) to 
-#                 "Perl's internal format"; this is weird since we're setting
-#                 this (I thought?) to utf8 via the 'encoding' module. Note that,
-#                 in the DM code, we can *not* call decode()! :) RTFS and be
-#                 amazed.
-#		- Suppressed "$entry->{'id'}" (see prev commit to re-add it)
-#	101008:
-#		- Access token support (basic auth deprecation)
-#	100623:
-#		- Added cmdGetFollowing
-#	100622:
-#		- Added constructTimestamp for nicer time formatting
-#	100621:
-#		- Made funcs take multiple args
-#		- Added cmdUnfavorite
-#		- Added cmdFavorite
-#		- Updated help thingy
-#		- Added ASCII-compatible message indicators
-#		- All msgs now begin with MSG_BEGIN
-#	100620: 
-#		- Added LWP timeout shorter than IRC timeout. 
-#                 This'd be redundant if we had forking code..
-#		- Experimental broadcast stuff. Scary. Optimally one would have
-#		  the ability to have one twitter account /per/ channel..
-#		- Too stoned to remember :D. Oh yes, new chars for "|_<here>".
-#		- Display favorites
-#		- Added setTwitterDM (RTFS for hacky dertails)
-#	100619:
-#		- Added cmdFollow
-#		- Added cmdUnfollow
-#		- Added cmdGetStatusByScreenName
-#		- Added constructTwitterStatus
-#		- Got rid of WrapError (Using exception handling for $twitter)
-#		- Moved + renamed some stuff.
-#		- Now prints {sender,user}{location}
-#		- Added check for (incoming) DM (Direct Messages)
-#	100618: 
-#		- Basic tweet mods
-#		- Timer code (from newmail.pl, lewl)
-#		- Initial copy of laserquote.pl
 
 ## E n v i r o m e n t ######################################################
 
