@@ -141,6 +141,8 @@ sub handleEvalError {
 		dStatPrint("Error in Net::Twitter during $location: $msg");
 	}
 
+	return(($msg));
+
 }
 
 sub handleArgs {
@@ -176,7 +178,7 @@ sub loadSettings {
 	}
 	for my $key (keys(%laseropts_env)) {
 		$laseropts_env{$key} = Irssi::settings_get_str('lasertweet_' . $key);
-		dStatPrint("LOAD lasertweet_$key = $laseropts_env{$key}");
+		#dStatPrint("LOAD lasertweet_$key = $laseropts_env{$key}");
 	}
 
 	initTwitter();
@@ -352,7 +354,8 @@ sub initTwitter {
 	alarm(0);
 	
 	if($@) {
-		handleEvalError("Init", $@);
+		my $r = $@;
+		handleEvalError("Init", $r);
 		return();
 	}
 
@@ -382,7 +385,8 @@ sub checkTwitterUpdates{
 	alarm(0);
 
 	if($@) {
-		handleEvalError("checkTwitterUpdates", $@);
+		my $r = $@;
+		handleEvalError("checkTwitterUpdates", $r);
 		return();
 	}
 
@@ -442,7 +446,8 @@ sub checkTwitterDMs{
 	alarm(0);
 
 	if($@) {
-		handleEvalError("checkTwitterDMs", $@);
+		my $r = $@;
+		handleEvalError("checkTwitterDMs", $r);
 		return();
 	}
 
@@ -572,8 +577,9 @@ sub setTwitterDM {
 	alarm(0);
 
 	if($@) {
-		handleEvalError("setTwitterDM", $@);
-		return($@);
+		my $r = $@;
+		handleEvalError("setTwitterDM", $r);
+		return($r);
 	}
 
 	unless(defined $ret) {
@@ -601,8 +607,9 @@ sub setTwitterUpdate {
 	alarm(0);
 
 	if($@) {
-		handleEvalError("setTwitterUpdate", $@);
-		return($@);
+		my $r = $@;
+		handleEvalError("setTwitterUpdate", $r);
+		return($r);
 	}
 
 	my $entry = $ret;
@@ -737,9 +744,10 @@ sub cmdGetFollowing {
 	alarm(0);
 
 	if($@) {
+		my $r = $@;
 		# FIXME 
-		handleEvalError("cmdGetFollowing", $@);
-		serverPost($server, MSG_HEADER_BAD . "\"$@\".", $target);
+		handleEvalError("cmdGetFollowing", $r);
+		serverPost($server, MSG_HEADER_BAD . "\"$r\".", $target);
 		return();
 	}
 
@@ -790,9 +798,10 @@ sub cmdFavorite {
 	alarm(0);
 
 	if($@) {
+		my $r = $@;
 		# FIXME
-		handleEvalError("cmdFavorite", $@);
-		serverPost($server, MSG_HEADER_BAD . "\"$@\".", $target);
+		handleEvalError("cmdFavorite", $r);
+		serverPost($server, MSG_HEADER_BAD . "\"$r\".", $target);
 		return();
 	}
 
@@ -830,9 +839,10 @@ sub cmdUnfavorite {
 	alarm(0);
 
 	if($@) {
+		my $r = $@;
 		# FIXME
-		handleEvalError("cmdUnfavourite", $@);
-		serverPost($server, MSG_HEADER_BAD . "\"$@\".", $target);
+		handleEvalError("cmdUnfavourite", $r);
+		serverPost($server, MSG_HEADER_BAD . "\"$r\".", $target);
 		return();
 	}
 
@@ -870,8 +880,9 @@ sub cmdFollow {
 	alarm(0);
 
 	if($@) {
-		handleEvalError("cmdFollow", $@);
-		serverPost($server, MSG_HEADER_BAD . "\"$@\".", $target);
+		my $r = $@;
+		handleEvalError("cmdFollow", $r);
+		serverPost($server, MSG_HEADER_BAD . "\"$r\".", $target);
 		return();
 	}
 
@@ -909,8 +920,9 @@ sub cmdUnfollow {
 	alarm(0);
 
 	if($@) {
-		handleEvalError("cmdUnfollow", $@);
-		serverPost($server, MSG_HEADER_BAD . "\"$@\".", $target);
+		my $r = $@;
+		handleEvalError("cmdUnfollow", $r);
+		serverPost($server, MSG_HEADER_BAD . "\"$r\".", $target);
 		return();
 	}
 
@@ -949,8 +961,9 @@ sub cmdGetStatusByScreenName {
 	alarm(0);
 
 	if($@) { # Is also true if there is no user with that name
-		handleEvalError("cmdGetStatusByScreenName", $@);
-		serverPost($server, MSG_HEADER_BAD .  "\"$@\".", $target);
+		my $r = $@;
+		handleEvalError("cmdGetStatusByScreenName", $r);
+		serverPost($server, MSG_HEADER_BAD .  "\"$r\".", $target);
 		return();
 	}
 
