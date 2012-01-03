@@ -68,7 +68,7 @@ use Encode;
 use constant {
 	FRIENDS_PER_ROW       => 10,
 	HTTP_TIMEOUT          => 20,
-	EVAL_TIMEOUT          => 30,            # Should be longer than HTTP_TIMEOUT
+	EVAL_TIMEOUT          => 300,            # Should be longer than HTTP_TIMEOUT
 	SERVER_TAG_HACK       => 'EFnet',
 	SERVER_ENABLE_BCAST   => 1,		# /* Make staticPost broadcast..
 	DEBUG                 => 1,             #    ..to all chans in list.. */
@@ -712,8 +712,6 @@ sub cmdTweet {
 			$entry = substr($entry, $end_offset + 1);
 			#dStatPrint("offs = $end_offset\nuser = '$user'\nentry = '$entry'\n");
 			$dm = 1; # XXX wtf do better, stoner.
-		} else {
-			dStatPrint("Not sure what happened. entry: \"$entry\"");
 		}
 	} 
 
