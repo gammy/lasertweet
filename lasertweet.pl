@@ -88,6 +88,7 @@ my $pipe;
 my $waiting = 0;
 my $twitter = -1;
 my $global_timer = -1;
+my $timeout_count = 0;
 our $max;
 our $timestamp;
 
@@ -138,10 +139,13 @@ sub handleEvalError {
 		dStatPrint("Re-instantiating Net::Twitter.");
 		initTwitter();
 	} else {
+		if($msg =~ m/timeout/i) {
+			$timeout_count++;
+		}
 		dStatPrint("Error in Net::Twitter during $location: $msg");
 	}
 
-	return(($msg));
+	return($msg);
 
 }
 
@@ -201,7 +205,10 @@ sub stopTimer{
 sub resetTimer{
         #dStatPrint("Reset timer $global_timer.");
         stopTimer();
-        $global_timer = Irssi::timeout_add(($laseropts_env{'update_interval'} * 1000), 
+
+	my $multiplier = 1 + $timeout_count;
+
+        $global_timer = Irssi::timeout_add(($laseropts_env{'update_interval'} * ($multiplier * 1000), 
 					   'cmdTwitterCallback', 
 					   undef);
 }
@@ -277,17 +284,6 @@ sub constructTwitterStatus {
 		       
 }
 
-# XXX Unused
-#sub readPipe {
-#	my $handle = shift;
-#	my $data = <$handle>;
-#	close $handle;
-#
-#	$pipe = -1;
-#	$waiting = 0;
-#
-#}
-
 ## S e r v e r ##############################################################
 
 # IRC
@@ -326,6 +322,8 @@ sub initTwitter {
 
 	undef $twitter;
 
+	$timeout_count = 0;
+
 	eval {
 		alarm(EVAL_TIMEOUT);
 
@@ -357,6 +355,8 @@ sub initTwitter {
 		my $r = $@;
 		handleEvalError("Init", $r);
 		return();
+	} else {
+		$timeout_count = 0;
 	}
 
 	unless(defined $twitter) {
@@ -388,6 +388,8 @@ sub checkTwitterUpdates{
 		my $r = $@;
 		handleEvalError("checkTwitterUpdates", $r);
 		return();
+	} else {
+		$timeout_count = 0;
 	}
 
 	my $new_id = ${$ret}[0]->{'id'};
@@ -449,7 +451,10 @@ sub checkTwitterDMs{
 		my $r = $@;
 		handleEvalError("checkTwitterDMs", $r);
 		return();
+	} else {
+		$timeout_count = 0;
 	}
+
 
 	my $new_id = ${$ret}[0]->{'id'};
 	unless(defined $new_id) {
@@ -580,6 +585,8 @@ sub setTwitterDM {
 		my $r = $@;
 		handleEvalError("setTwitterDM", $r);
 		return($r);
+	} else {
+		$timeout_count = 0;
 	}
 
 	unless(defined $ret) {
@@ -610,6 +617,8 @@ sub setTwitterUpdate {
 		my $r = $@;
 		handleEvalError("setTwitterUpdate", $r);
 		return($r);
+	} else {
+		$timeout_count = 0;
 	}
 
 	my $entry = $ret;
@@ -747,6 +756,8 @@ sub cmdGetFollowing {
 		handleEvalError("cmdGetFollowing", $r);
 		serverPost($server, MSG_HEADER_BAD . "\"$r\".", $target);
 		return();
+	} else {
+		$timeout_count = 0;
 	}
 
 	unless(defined $ret) { # Shouldnt happen.
@@ -801,6 +812,8 @@ sub cmdFavorite {
 		handleEvalError("cmdFavorite", $r);
 		serverPost($server, MSG_HEADER_BAD . "\"$r\".", $target);
 		return();
+	} else {
+		$timeout_count = 0;
 	}
 
 	unless(defined $ret) { # Shouldnt happen.
@@ -842,6 +855,8 @@ sub cmdUnfavorite {
 		handleEvalError("cmdUnfavourite", $r);
 		serverPost($server, MSG_HEADER_BAD . "\"$r\".", $target);
 		return();
+	} else {
+		$timeout_count = 0;
 	}
 
 	unless(defined $ret) { # Shouldnt happen.
@@ -882,6 +897,8 @@ sub cmdFollow {
 		handleEvalError("cmdFollow", $r);
 		serverPost($server, MSG_HEADER_BAD . "\"$r\".", $target);
 		return();
+	} else {
+		$timeout_count = 0;
 	}
 
 	unless(defined $ret) { # Shouldnt happen.
@@ -922,6 +939,8 @@ sub cmdUnfollow {
 		handleEvalError("cmdUnfollow", $r);
 		serverPost($server, MSG_HEADER_BAD . "\"$r\".", $target);
 		return();
+	} else {
+		$timeout_count = 0;
 	}
 
 	unless(defined $ret) { # Shouldnt happen.
@@ -963,6 +982,8 @@ sub cmdGetStatusByScreenName {
 		handleEvalError("cmdGetStatusByScreenName", $r);
 		serverPost($server, MSG_HEADER_BAD .  "\"$r\".", $target);
 		return();
+	} else {
+		$timeout_count = 0;
 	}
 
 	unless(defined $ret) {  # User hasn't made any posts?
