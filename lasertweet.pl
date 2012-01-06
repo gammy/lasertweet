@@ -208,7 +208,7 @@ sub resetTimer{
 
 	my $multiplier = 1 + $timeout_count;
 
-        $global_timer = Irssi::timeout_add(($laseropts_env{'update_interval'} * ($multiplier * 1000), 
+        $global_timer = Irssi::timeout_add($laseropts_env{'update_interval'} * ($multiplier * 1000), 
 					   'cmdTwitterCallback', 
 					   undef);
 }
