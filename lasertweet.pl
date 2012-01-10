@@ -136,14 +136,17 @@ sub handleEvalError {
 
 	if($msg =~ m/Eval/) {
 		dStatPrint("Timeout(SHOULD NOT HAPPEN) in Net::Twitter during $location: $msg");
-		dStatPrint("Re-instantiating Net::Twitter.");
-		initTwitter();
 	} else {
+		dStatPrint("Error in Net::Twitter during $location: $msg");
+
 		if($msg =~ m/timeout/i) {
 			$timeout_count++;
+			#}elsif($msg =~ m/Could not authenticate/i) {
 		}
-		dStatPrint("Error in Net::Twitter during $location: $msg");
 	}
+	
+	dStatPrint("Re-instantiating Net::Twitter.");
+	initTwitter();
 
 	return($msg);
 
